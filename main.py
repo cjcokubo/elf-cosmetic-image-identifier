@@ -7,6 +7,7 @@ from transformers import CLIPProcessor, CLIPModel
 model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
 processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
 
+# Descriptions of cosmetic products
 cosmetic_descriptions = [
     "elf, Power Grip primer",
     "Dior, lip glow oil",
@@ -16,35 +17,30 @@ cosmetic_descriptions = [
 ]
 
 def update_frame():
-    # Capture a single frame from the webcam
+    """Continuously captures and displays webcam frames."""
     ret, frame = cap.read()
-
     if ret:
-        # Convert the image to a format that Tkinter can use
         cv_image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
         imgtk = ImageTk.PhotoImage(image=cv_image)
         lbl_img.config(image=imgtk)
         lbl_img.image = imgtk
-        # Call update_frame again after a short delay to update the image
         root.after(10, update_frame)
 
 def capture_image(event):
-    # Capture a single image from the webcam
+    """Captures an image from the webcam and identifies the cosmetic product."""
     ret, frame = cap.read()
     if ret:
-        # Save the captured frame
-        cv2.imwrite('captured_image.jpg', frame)
+        image_path = 'captured_image.jpg'
+        cv2.imwrite(image_path, frame)
 
-        # Identify the cosmetic product in the captured image
-        identified_cosmetic = identify_cosmetic_synchronous('captured_image.jpg')
-        # print(f"\033[1;31mIDENTIFIED COSMETIC: {identified_cosmetic['cosmetic'].upper()}, CONFIDENCE: {identified_cosmetic['confidence']:.2f}\033[0m")
-        print(
-            f"\033[1;33mIDENTIFIED COSMETIC: {identified_cosmetic['cosmetic'].upper()}, CONFIDENCE: {identified_cosmetic['confidence']:.2f}\033[0m")
+        identified_cosmetic = identify_cosmetic_synchronous(image_path)
+        print(f"\033[1;33mIDENTIFIED COSMETIC: {identified_cosmetic['cosmetic'].upper()}, "
+              f"CONFIDENCE: {identified_cosmetic['confidence']:.2f}\033[0m")
 
 def identify_cosmetic_synchronous(image_path):
+    """Identifies the cosmetic product in the image using the CLIP model."""
     image = Image.open(image_path)
 
-    # Process the image and descriptions
     inputs = processor(text=cosmetic_descriptions, images=image, return_tensors="pt", padding=True)
     outputs = model(**inputs)
 
@@ -62,34 +58,20 @@ def identify_cosmetic_synchronous(image_path):
 # Initialize the webcam
 cap = cv2.VideoCapture(0)
 
-# Create a Tkinter window
+# Create and configure the Tkinter window
 root = Tk()
 root.title("Cosmetic Product Identifier")
-
-# Get half of the screen width and height and set it as the window size
-screen_width = root.winfo_screenwidth() // 2
-screen_height = root.winfo_screenheight() // 2
-root.geometry(f"{screen_width}x{screen_height}")
+root.geometry(f"{root.winfo_screenwidth() // 2}x{root.winfo_screenheight() // 2}")
 
 # Add a label to display the webcam feed
 lbl_img = Label(root)
 lbl_img.pack(side=TOP, fill=BOTH, expand=True)
 
-# Bind any key press to the capture_image function
+# Bind key press to the capture_image function
 root.bind('<Key>', capture_image)
 
-# Start updating the frame for real-time display
+# Start the real-time frame update
 update_frame()
 
 # Start the Tkinter main loop
 root.mainloop()
-
-
-# DOCU
-## Uses CLIP — zero-shot model; little to no training required
-### We just have database of brands and product names and it matches it
-### Also by OpenAI
-
-## Rewards brands and products with signature packaging and formulations
-
-## Applications are endless: gamification, ingredients list rating, shade and formulation finder
